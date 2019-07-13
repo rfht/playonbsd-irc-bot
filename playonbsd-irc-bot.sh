@@ -45,6 +45,9 @@ CONFIG_FILE="$(dirname $0)/bot.config"
 
 if [ -f "$CONFIG_FILE" ] ; then
 	. "$CONFIG_FILE"
+else
+	echo "Error: couldn't find bot.config"
+	exit 1
 fi
 
 
