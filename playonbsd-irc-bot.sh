@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env ksh
 ########
 # Copyright (c) 2019 Thomas Frohwein <11335318+rfht@users.noreply.github.com>
 #
@@ -15,11 +15,14 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ########
 
-# You need to set CLIENT_ID (for Twitch API) and NICK/PASS
-# (for freenode registration)
+# You need to set CLIENT_ID (for Twitch API) and NICK/PASS/CHAN
+# (for freenode registration/login) and USER_LOGINS (for searching through
+# streams of specific users which is recommended for speed reasons)
 CLIENT_ID=
 NICK=
 PASS=
+CHAN=
+USER_LOGINS=
 
 # TODO
 # automatically recover from disconnect
@@ -27,13 +30,24 @@ PASS=
 #    displayed after 'TYPE:'
 # find a way to not have to list individual streamers to query
 # add a way to add nicks to karma.txt when they JOIN (':<NICK>! [...] JOIN [...]')
+# - or just query my friend/following list and use that
+# eliminate option to change one's own karma
+# add cleanup of $ACTIVE_STREAMS
+# read config from bot.config ($CONFIG_FILE)
+# fix TODOs inline
 
 SERVER=irc.freenode.net
 PORT=6667
 CHAN="#openbsd-gaming"
 CURSOR=
 ACTIVE_STREAM_IDS=
-KARMA_FILE=$(dirname $0)/karma.txt
+KARMA_FILE="$(dirname $0)/karma.txt"
+CONFIG_FILE="$(dirname $0)/bot.config"
+
+if [ -f "$CONFIG_FILE" ] ; then
+	# TODO: read $CLIENT_ID, $NICK, $PASS, $CHAN, $USER_LOGINS
+fi
+
 
 if [ !  -f "$KARMA_FILE" ] ; then
 	touch "$KARMA_FILE"
@@ -67,7 +81,7 @@ update_names()
 	for name in $ACTIVE_NAMES; do
 		# sanitize name
 		name="$(echo "$name" | tr -cd "[:alnum:]_-")"
-		if [ -z "$(grep -E "^$name" "$KARMA_FILE")" ] ; then
+		if [ -z "$(grep -E "^$name:" "$KARMA_FILE")" ] ; then
 			echo "$name:0" >> "$KARMA_FILE"
 		fi
 	done
@@ -87,12 +101,12 @@ adjust_karma()
 get_karma()
 {
 	# read karma from $KARMA_FILE
-	if [ -z "$(grep -E "^$1" "$KARMA_FILE")" ] ; then
+	if [ -z "$(grep -E "^$1:" "$KARMA_FILE")" ] ; then
 		# return silently
 		return 1
 	fi
-	echo $(grep -E "^$1" "$KARMA_FILE" \
-		| sed -E 's/^.*:([0-9]+)/\1/')
+	echo $(grep -E "^$1:" "$KARMA_FILE" \
+		| sed -E 's/^.*:(\-?[0-9]+)/\1/')
 }
 
 set_karma()
@@ -110,7 +124,7 @@ streaminfo()
 		else
 			PARAMS="?"
 		fi
-		PARAMS="${PARAMS}first=100&user_login=thfrw&user_login=seriphyde"
+		PARAMS="${PARAMS}first=100${USER_LOGINS}"
 		STREAMS="$(curl -sH "Client-ID: $CLIENT_ID" \
 			-X GET "https://api.twitch.tv/helix/streams$PARAMS")"
 		CURSOR="$(echo "$STREAMS" \
@@ -168,7 +182,7 @@ EOF
 			PING\ *) print -p "$(echo "$line" | sed -E 's/PING/PONG/')" ;\
 				echo "[PONG] $line";;
 			*++*) NICK="$(echo "$line" \
-				| grep -Eo "[a-zA-Z0-9_]*\+\+" \
+				| grep -Eo "[a-zA-Z0-9_]*\+\+" | head -1 \
 				| rev | cut -c 3- | rev)"; \
 				if [ \( -n "$NICK" \) \
 					-a \( -n "$(grep -E "^$NICK:" "$KARMA_FILE")" \) ] ; \
@@ -178,7 +192,7 @@ EOF
 				else echo "[IGNORE] $line"; \
 				fi;;
 			*--*) NICK="$(echo "$line" \
-				| grep -Eo "[a-zA-Z0-9_]*\-\-" \
+				| grep -Eo "[a-zA-Z0-9_]*\-\-" | head -1 \
 				| rev | cut -c 3- | rev)"; \
 				if [ \( -n "$NICK" \) \
 					-a \( -n "$(grep -E "^$NICK:" "$KARMA_FILE")" \) ] ; \
