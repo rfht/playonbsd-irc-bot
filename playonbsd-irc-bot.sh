@@ -33,7 +33,6 @@ USER_LOGINS=
 # - or just query my friend/following list and use that
 # eliminate option to change one's own karma
 # add cleanup of $ACTIVE_STREAMS
-# read config from bot.config ($CONFIG_FILE)
 # fix TODOs inline
 
 SERVER=irc.freenode.net
@@ -45,7 +44,7 @@ KARMA_FILE="$(dirname $0)/karma.txt"
 CONFIG_FILE="$(dirname $0)/bot.config"
 
 if [ -f "$CONFIG_FILE" ] ; then
-	# TODO: read $CLIENT_ID, $NICK, $PASS, $CHAN, $USER_LOGINS
+	. "$CONFIG_FILE"
 fi
 
 
