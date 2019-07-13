@@ -111,7 +111,7 @@ get_karma()
 
 set_karma()
 {
-	sed -iE "s/^$1:.*$/$1:$2/" "$KARMA_FILE"
+	sed -E -i "s/^$1:.*$/$1:$2/" "$KARMA_FILE"
 }
 
 streaminfo()
