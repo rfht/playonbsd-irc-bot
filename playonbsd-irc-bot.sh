@@ -45,6 +45,8 @@ CURSOR=
 ACTIVE_STREAM_IDS=
 KARMA_FILE="$(dirname $0)/karma.txt"
 CONFIG_FILE="$(dirname $0)/bot.config"
+LAST_HR=
+CURRENT_HR=
 
 if [ -f "$CONFIG_FILE" ] ; then
 	. "$CONFIG_FILE"
@@ -117,7 +119,8 @@ get_followed_channels()
 
 update_user_list()
 {
-	USER_LIST=
+	# add the follower channel itself to the watched channels
+	USER_LIST="&user_id=$FOLLOWER_ID"
 	for idnum in $FOLLOWED_CHANS; do
 		USER_LIST="$USER_LIST&user_id=$idnum";
 	done
@@ -143,8 +146,18 @@ streaminfo()
 {
 	while :
 	do
-		get_followed_channels
-		update_user_list
+		# update USER_LIST from followed channels only once an hour
+		CURRENT_HR=$(date -j +"%H")
+		if [ -z "$LAST_HR" ] ; then
+			get_followed_channels
+			update_user_list
+			echo "[INFO] USER_LIST updated: $USER_LIST"
+		elif [ $CURRENT_HR -ne $LAST_HR ] ; then
+			get_followed_channels
+			update_user_list
+			echo "[INFO] USER_LIST updated: $USER_LIST"
+		fi
+		LAST_HR=$CURRENT_HR
 		PARAMS=
 		if [ -n "$CURSOR" ] ; then
 			PARAMS="?after=$CURSOR&"
@@ -237,16 +250,19 @@ EOF
 	done
 } &
 
-(
+{
 	sleep 15	# in order to not start before registered and able to post
 	streaminfo
-) &
+} &
 
 while read line; do
 	case "$line" in
 		# SHOW <variable> -> shows the value of a variable of the script
 		SHOW\ *) eval "echo \${$(echo "$line" \
 			| sed -E 's/SHOW[[:blank:]]+//')}";;
+		# CALL <function/command> -> call a command/function in the script
+		CALL\ *) $(echo "$line" \
+			| sed -E 's/CALL[[:blank:]]+//');;
 		*) print -p "$line";;
 	esac
 done
