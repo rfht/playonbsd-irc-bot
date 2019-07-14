@@ -30,12 +30,9 @@ FOLLOWER_ID=
 # automatically recover from disconnect
 # diagnose false positives from already terminated streams -> look for what is
 #    displayed after 'TYPE:'
-# find a way to not have to list individual streamers to query
 # add a way to add nicks to karma.txt when they JOIN (':<NICK>! [...] JOIN [...]')
-# - or just query my friend/following list and use that
-# eliminate option to change one's own karma
 # add cleanup of $ACTIVE_STREAMS
-# fix TODOs inline
+# fix TODOs and FIXMEs inline
 
 SERVER=irc.freenode.net
 PORT=6667
@@ -256,6 +253,18 @@ EOF
 						adjust_karma "$NICK" -1
 						print -p "PRIVMSG $CHAN :karma decreased for $NICK to $(get_karma "$NICK")"
 					fi
+					echo "[KARMA] $line"
+				else
+					echo "[IGNORE] $line"
+				fi;;
+			*??*)
+				NICK="$(echo "$line" \
+					| grep -Eo "[a-zA-Z0-9_]*\?\?" | head -1 \
+					| rev | cut -c 3- | rev)"
+				if [ \( -n "$NICK" \) \
+					-a \( -n "$(grep -E "^$NICK:" "$KARMA_FILE")" \) ]
+				then
+					print -p "PRIVMSG $CHAN :$NICK's karma: $(get_karma "$NICK")"
 					echo "[KARMA] $line"
 				else
 					echo "[IGNORE] $line"
