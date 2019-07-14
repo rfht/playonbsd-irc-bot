@@ -244,6 +244,9 @@ EOF
 
 while read line; do
 	case "$line" in
+		# SHOW <variable> -> shows the value of a variable of the script
+		SHOW\ *) eval "echo \${$(echo "$line" \
+			| sed -E 's/SHOW[[:blank:]]+//')}"
 		*) print -p "$line";;
 	esac
 done
