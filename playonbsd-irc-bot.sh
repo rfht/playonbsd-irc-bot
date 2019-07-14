@@ -257,7 +257,7 @@ EOF
 				else
 					echo "[IGNORE] $line"
 				fi;;
-			*??*)
+			*\?\?*)
 				NICK="$(echo "$line" \
 					| grep -Eo "[a-zA-Z0-9_]*\?\?" | head -1 \
 					| rev | cut -c 3- | rev)"
@@ -269,10 +269,18 @@ EOF
 				else
 					echo "[IGNORE] $line"
 				fi;;
-			*\ 353\ *$CHAN*) ACTIVE_NAMES=$(echo "$line" \
-				| sed -E 's,^.* 353 [^:]*:(.*)$,\1,' | tr -d '@'); \
-				echo "[NAMES] $line\n$ACTIVE_NAMES"; \
-				update_names;;
+			*\ 353\ *$CHAN*)
+				echo "[NAMES] $line\n$ACTIVE_NAMES"
+				ACTIVE_NAMES=$(echo "$line" \
+					| sed -E 's,^.* 353 [^:]*:(.*)$,\1,' | tr -d '@')
+				update_names
+				;;
+			*\ JOIN\ $CHAN)
+				echo "[NAMES] $line\n$ACTIVE_NAMES"
+				ACTIVE_NAMES=$(echo "$line" \
+					| sed -E 's,^.* 353 [^:]*:(.*)$,\1,' | tr -d '@')
+				update_names
+				;;
 			*) echo "[IGNORE] $line";;
 		esac
 	done
