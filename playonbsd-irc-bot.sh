@@ -16,13 +16,12 @@
 ########
 
 # You need to set CLIENT_ID (for Twitch API) and NICK/PASS/CHAN
-# (for freenode registration/login) and USER_LIST (for searching through
-# streams of specific users which is recommended for speed reasons)
+# (for freenode registration/login) and FOLLOWER_ID (for searching through
+# streams of followed users which is necessary for speed reasons)
 CLIENT_ID=
 NICK=
 PASS=
 CHAN=
-USER_LIST=
 # the follower is the account whose followed channels will be searched for
 # a matching, active stream
 FOLLOWER_ID=
@@ -40,7 +39,6 @@ FOLLOWER_ID=
 
 SERVER=irc.freenode.net
 PORT=6667
-CHAN="#openbsd-gaming"
 CURSOR=
 ACTIVE_STREAM_IDS=
 KARMA_FILE="$(dirname $0)/karma.txt"
@@ -55,6 +53,12 @@ else
 	exit 1
 fi
 
+# Check that essential variables are not empty
+[ -z "$CLIENT_ID" ] && echo "Error: Missing required variable CLIENT_ID in bot.config"; exit 1
+[ -z "$NICK" ] && echo "Error: Missing required variable NICK in bot.config"; exit 1
+[ -z "$PASS" ] && echo "Error: Missing required variable PASS in bot.config"; exit 1
+[ -z "$CHAN" ] && echo "Error: Missing required variable CHAN in bot.config"; exit 1
+[ -z "$FOLLOWER_ID" ] && echo "Error: Missing required variable FOLLOWER_ID in bot.config"; exit 1
 
 if [ !  -f "$KARMA_FILE" ] ; then
 	touch "$KARMA_FILE"
@@ -226,9 +230,14 @@ EOF
 				| rev | cut -c 3- | rev)"; \
 				if [ \( -n "$NICK" \) \
 					-a \( -n "$(grep -E "^$NICK:" "$KARMA_FILE")" \) ] ; \
-				then adjust_karma "$NICK" +1; \
-				print -p "PRIVMSG $CHAN :karma increased for $NICK to $(get_karma "$NICK")"; \
-				echo "[KARMA] $line"; \
+				then \
+					if [ -n "$(echo "$line" | grep -Eo "^:$NICK!") ] ; then \
+						adjust_karma "$NICK" -1; \
+						print -p "PRIVMSG $CHAN :trying to increase your own karma is selfish. karma decreased for $NICK to $(get_karma "$NICK")";
+					else adjust_karma "$NICK" +1; \
+						print -p "PRIVMSG $CHAN :karma increased for $NICK to $(get_karma "$NICK")"; \
+					fi; \
+					echo "[KARMA] $line"; \
 				else echo "[IGNORE] $line"; \
 				fi;;
 			*--*) NICK="$(echo "$line" \
@@ -236,9 +245,13 @@ EOF
 				| rev | cut -c 3- | rev)"; \
 				if [ \( -n "$NICK" \) \
 					-a \( -n "$(grep -E "^$NICK:" "$KARMA_FILE")" \) ] ; \
-				then adjust_karma "$NICK" -1; \
-				print -p "PRIVMSG $CHAN :karma decreased for $NICK to $(get_karma "$NICK")"; \
-				echo "[KARMA] $line"; \
+				then \
+					if [ -n "$(echo "$line" | grep -Eo "^:$NICK!") ] ; then \
+						print -p "PRIVMSG $CHAN :you can't decrease your own karma. Leave that to others, silly";
+					else adjust_karma "$NICK" -1; \
+						print -p "PRIVMSG $CHAN :karma decreased for $NICK to $(get_karma "$NICK")"; \
+					fi; \
+					echo "[KARMA] $line"; \
 				else echo "[IGNORE] $line"; \
 				fi;;
 			*\ 353\ *$CHAN*) ACTIVE_NAMES=$(echo "$line" \
