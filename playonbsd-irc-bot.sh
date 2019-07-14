@@ -16,13 +16,16 @@
 ########
 
 # You need to set CLIENT_ID (for Twitch API) and NICK/PASS/CHAN
-# (for freenode registration/login) and USER_LOGINS (for searching through
+# (for freenode registration/login) and USER_LIST (for searching through
 # streams of specific users which is recommended for speed reasons)
 CLIENT_ID=
 NICK=
 PASS=
 CHAN=
-USER_LOGINS=
+USER_LIST=
+# the follower is the account whose followed channels will be searched for
+# a matching, active stream
+FOLLOWER_ID=
 
 # TODO
 # automatically recover from disconnect
@@ -100,6 +103,26 @@ adjust_karma()
 	fi
 }
 
+get_followed_channels()
+{
+	# FIXME: limited to 100 channels for now because it doesn't
+	# follow the pagination/cursor.
+	TWITCH_FOLLOWS="$(curl -sH "Client-ID: $CLIENT_ID" \
+		-X GET "https://api.twitch.tv/helix/users/follows?from_id=${FOLLOWER_ID}&first=100")"
+	# preserve the newline \n to keep separate numeric entries
+	FOLLOWED_CHANS="$(echo "$TWITCH_FOLLOWS" \
+		| grep -Eo "\"to_id\":\"[0-9]+\"" \
+		| tr -cd "[:digit:]\n")"
+}
+
+update_user_list()
+{
+	USER_LIST=
+	for idnum in $FOLLOWED_CHANS; do
+		USER_LIST="$USER_LIST&user_id=$idnum";
+	done
+}
+
 get_karma()
 {
 	# read karma from $KARMA_FILE
@@ -120,13 +143,15 @@ streaminfo()
 {
 	while :
 	do
+		get_followed_channels
+		update_user_list
 		PARAMS=
 		if [ -n "$CURSOR" ] ; then
 			PARAMS="?after=$CURSOR&"
 		else
 			PARAMS="?"
 		fi
-		PARAMS="${PARAMS}first=100${USER_LOGINS}"
+		PARAMS="${PARAMS}first=100${USER_LIST}"
 		STREAMS="$(curl -sH "Client-ID: $CLIENT_ID" \
 			-X GET "https://api.twitch.tv/helix/streams$PARAMS")"
 		CURSOR="$(echo "$STREAMS" \
