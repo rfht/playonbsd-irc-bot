@@ -54,11 +54,11 @@ else
 fi
 
 # Check that essential variables are not empty
-[ -z "$CLIENT_ID" ] && echo "Error: Missing required variable CLIENT_ID in bot.config"; exit 1
-[ -z "$NICK" ] && echo "Error: Missing required variable NICK in bot.config"; exit 1
-[ -z "$PASS" ] && echo "Error: Missing required variable PASS in bot.config"; exit 1
-[ -z "$CHAN" ] && echo "Error: Missing required variable CHAN in bot.config"; exit 1
-[ -z "$FOLLOWER_ID" ] && echo "Error: Missing required variable FOLLOWER_ID in bot.config"; exit 1
+[ -z "$CLIENT_ID" ] && echo "Error: Missing required variable CLIENT_ID in bot.config" && exit 1
+[ -z "$NICK" ] && echo "Error: Missing required variable NICK in bot.config" && exit 1
+[ -z "$PASS" ] && echo "Error: Missing required variable PASS in bot.config" && exit 1
+[ -z "$CHAN" ] && echo "Error: Missing required variable CHAN in bot.config" && exit 1
+[ -z "$FOLLOWER_ID" ] && echo "Error: Missing required variable FOLLOWER_ID in bot.config" && exit 1
 
 if [ !  -f "$KARMA_FILE" ] ; then
 	touch "$KARMA_FILE"
@@ -225,34 +225,40 @@ EOF
 		case "$line" in
 			PING\ *) print -p "$(echo "$line" | sed -E 's/PING/PONG/')" ;\
 				echo "[PONG] $line";;
-			*++*) NICK="$(echo "$line" \
-				| grep -Eo "[a-zA-Z0-9_]*\+\+" | head -1 \
-				| rev | cut -c 3- | rev)"; \
+			*++*)
+				NICK="$(echo "$line" \
+					| grep -Eo "[a-zA-Z0-9_]*\+\+" | head -1 \
+					| rev | cut -c 3- | rev)"
 				if [ \( -n "$NICK" \) \
-					-a \( -n "$(grep -E "^$NICK:" "$KARMA_FILE")" \) ] ; \
-				then \
-					if [ -n "$(echo "$line" | grep -Eo "^:$NICK!") ] ; then \
-						adjust_karma "$NICK" -1; \
-						print -p "PRIVMSG $CHAN :trying to increase your own karma is selfish. karma decreased for $NICK to $(get_karma "$NICK")";
-					else adjust_karma "$NICK" +1; \
-						print -p "PRIVMSG $CHAN :karma increased for $NICK to $(get_karma "$NICK")"; \
-					fi; \
-					echo "[KARMA] $line"; \
-				else echo "[IGNORE] $line"; \
+					-a \( -n "$(grep -E "^$NICK:" "$KARMA_FILE")" \) ]
+				then
+					if [ -n "$(echo "$line" | grep -Eo "^:$NICK!")" ] ; then
+						adjust_karma "$NICK" -1
+						print -p "PRIVMSG $CHAN :trying to increase your own karma is selfish. karma decreased for $NICK to $(get_karma "$NICK")"
+					else
+						adjust_karma "$NICK" +1
+						print -p "PRIVMSG $CHAN :karma increased for $NICK to $(get_karma "$NICK")"
+					fi
+					echo "[KARMA] $line"
+				else
+					echo "[IGNORE] $line"
 				fi;;
-			*--*) NICK="$(echo "$line" \
-				| grep -Eo "[a-zA-Z0-9_]*\-\-" | head -1 \
-				| rev | cut -c 3- | rev)"; \
+			*--*)
+				NICK="$(echo "$line" \
+					| grep -Eo "[a-zA-Z0-9_]*\-\-" | head -1 \
+					| rev | cut -c 3- | rev)"
 				if [ \( -n "$NICK" \) \
-					-a \( -n "$(grep -E "^$NICK:" "$KARMA_FILE")" \) ] ; \
-				then \
-					if [ -n "$(echo "$line" | grep -Eo "^:$NICK!") ] ; then \
-						print -p "PRIVMSG $CHAN :you can't decrease your own karma. Leave that to others, silly";
-					else adjust_karma "$NICK" -1; \
-						print -p "PRIVMSG $CHAN :karma decreased for $NICK to $(get_karma "$NICK")"; \
-					fi; \
-					echo "[KARMA] $line"; \
-				else echo "[IGNORE] $line"; \
+					-a \( -n "$(grep -E "^$NICK:" "$KARMA_FILE")" \) ]
+				then
+					if [ -n "$(echo "$line" | grep -Eo "^:$NICK!")" ] ; then
+						print -p "PRIVMSG $CHAN :you can't decrease your own karma. leave that to others, silly."
+					else
+						adjust_karma "$NICK" -1
+						print -p "PRIVMSG $CHAN :karma decreased for $NICK to $(get_karma "$NICK")"
+					fi
+					echo "[KARMA] $line"
+				else
+					echo "[IGNORE] $line"
 				fi;;
 			*\ 353\ *$CHAN*) ACTIVE_NAMES=$(echo "$line" \
 				| sed -E 's,^.* 353 [^:]*:(.*)$,\1,' | tr -d '@'); \
