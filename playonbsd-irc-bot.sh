@@ -275,8 +275,8 @@ EOF
 					| sed -E 's,^.* 353 [^:]*:(.*)$,\1,' | tr -d '@')
 				update_names
 				;;
-			*\ JOIN\ $CHAN)
-				echo "[NAMES] $line\n$ACTIVE_NAMES"
+			*\ JOIN\ $CHAN*)
+				echo "[JOIN] $line\n$ACTIVE_NAMES"
 				ACTIVE_NAMES=$(echo "$line" \
 					| sed -E 's,^.* 353 [^:]*:(.*)$,\1,' | tr -d '@')
 				update_names
