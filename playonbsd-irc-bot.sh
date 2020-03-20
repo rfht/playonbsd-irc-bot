@@ -272,14 +272,23 @@ EOF
 			*\ 353\ *$CHAN*)
 				echo "[NAMES] $line\n$ACTIVE_NAMES"
 				ACTIVE_NAMES=$(echo "$line" \
-					| sed -E 's,^.* 353 [^:]*:(.*)$,\1,' | tr -d '@')
+					| sed -E 's,^.* 353 [^:]*:(.*)$,\1,' \
+					| tr -cd '[a-zA-Z0-9_[:blank:]]')
 				update_names
 				;;
 			*\ JOIN\ $CHAN*)
 				echo "[JOIN] $line\n$ACTIVE_NAMES"
-				ACTIVE_NAMES=$(echo "$line" \
-					| sed -E 's,^.* 353 [^:]*:(.*)$,\1,' | tr -d '@')
-				update_names
+				NICK=
+				NICK="$(echo "$line" \
+					| grep -Eo "^:[a-zA-Z0-9_]*" \
+					| cut -c 2-)"
+				if [ \( -n "$NICK" \) \
+					-a \( -z "$(grep -E "^$NICK:" "$KARMA_FILE")" \) ]
+				then
+					ACTIVE_NAMES="$ACTIVE_NAMES $NICK"
+					update_names
+					echo "[JOIN] added $NICK to karma file"
+				fi
 				;;
 			*) echo "[IGNORE] $line";;
 		esac
